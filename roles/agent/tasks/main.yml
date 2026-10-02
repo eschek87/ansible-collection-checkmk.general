@@ -27,6 +27,69 @@
     - install-package
     - download-package
 
+- name: "Ensure Host is present in the correct Folder."
+  checkmk.general.host:
+    server_url: "{{ checkmk_agent_server_protocol }}://{{ checkmk_agent_server }}:{{ checkmk_agent_server_port }}/"
+    site: "{{ checkmk_agent_site }}"
+    validate_certs: "{{ checkmk_agent_server_validate_certs | bool }}"
+    api_user: "{{ checkmk_agent_user }}"
+    api_secret: "{{ __checkmk_agent_auth }}"
+    folder: "{{ checkmk_agent_folder }}"
+    name: "{{ checkmk_agent_host_name }}"
+    state: "present"
+  become: false
+  register: __checkmk_agent_create_result
+  delegate_to: "{{ checkmk_agent_delegate_api_calls }}"
+  when:
+    - checkmk_agent_add_host | bool
+  notify: "Activate changes"
+  tags:
+    - manage-host
+
+- name: "Ensure Host Folder is present."
+  checkmk.general.folder:
+    server_url: "{{ checkmk_agent_server_protocol }}://{{ checkmk_agent_server }}:{{ checkmk_agent_server_port }}/"
+    site: "{{ checkmk_agent_site }}"
+    validate_certs: "{{ checkmk_agent_server_validate_certs | bool }}"
+    api_user: "{{ checkmk_agent_user }}"
+    api_secret: "{{ __checkmk_agent_auth }}"
+    path: "{{ checkmk_agent_folder }}"
+    state: "present"
+  become: false
+  delegate_to: "{{ checkmk_agent_delegate_api_calls }}"
+  when:
+    - checkmk_agent_folder_create | bool
+    - checkmk_agent_add_host | bool
+  notify: "Activate changes"
+  tags:
+    - manage-host
+
+- name: "Update Host Attributes."
+  checkmk.general.host:
+    server_url: "{{ checkmk_agent_server_protocol }}://{{ checkmk_agent_server }}:{{ checkmk_agent_server_port }}/"
+    site: "{{ checkmk_agent_site }}"
+    validate_certs: "{{ checkmk_agent_server_validate_certs | bool }}"
+    api_user: "{{ checkmk_agent_user }}"
+    api_secret: "{{ __checkmk_agent_auth }}"
+    name: "{{ checkmk_agent_host_name }}"
+    attributes: "{{ checkmk_agent_host_attributes }}"
+    state: "present"
+  become: false
+  register: __checkmk_agent_update_attributes_result
+  delegate_to: "{{ checkmk_agent_delegate_api_calls }}"
+  when:
+    - checkmk_agent_add_host | bool
+  notify: "Activate changes"
+  tags:
+    - manage-host
+
+- name: "Ensure registration readiness."  # noqa no-handler
+  ansible.builtin.meta: flush_handlers
+  when:
+    - checkmk_agent_add_host | bool
+  tags:
+    - always
+
 - name: "{{ ansible_facts['system'] }}: Include agent package download tasks."
   ansible.builtin.include_tasks: "{{ ansible_facts['system'] }}-files.yml"
   tags:
